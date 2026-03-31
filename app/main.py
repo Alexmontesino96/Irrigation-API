@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
 from app.exceptions import register_exception_handlers
 from app.database import engine, Base
 from app.routers import auth, clients, properties, irrigation_systems, jobs, job_notes, reminders, calendar
@@ -12,7 +13,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+    allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

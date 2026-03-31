@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str
     SUPABASE_JWT_SECRET: str
     ALGORITHM: str = "HS256"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002"
 
     model_config = {
         "env_file": ".env",
