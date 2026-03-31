@@ -21,10 +21,15 @@ async def create_reminder(db: AsyncSession, owner_id: str, data: dict) -> Remind
     await db.refresh(reminder)
     return reminder
 
-async def get_reminders(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None) -> tuple[list[Reminder], int]:
+async def get_reminders(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, search: Optional[str] = None) -> tuple[list[Reminder], int]:
     query = select(Reminder).join(Property).join(Client).where(Client.owner_id == owner_id)
     count_query = select(func.count()).select_from(Reminder).join(Property).join(Client).where(Client.owner_id == owner_id)
 
+    if search:
+        search_filter = f"%{search}%"
+        search_cond = Reminder.title.ilike(search_filter) | Reminder.description.ilike(search_filter)
+        query = query.where(search_cond)
+        count_query = count_query.where(search_cond)
     if status:
         query = query.where(Reminder.status == status)
         count_query = count_query.where(Reminder.status == status)

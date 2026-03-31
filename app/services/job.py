@@ -25,11 +25,20 @@ async def create_job(db: AsyncSession, owner_id: str, data: dict) -> Job:
     await db.refresh(job)
     return job
 
-async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, job_type: Optional[str] = None, property_id: Optional[str] = None) -> tuple[list[Job], int]:
+async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, job_type: Optional[str] = None, property_id: Optional[str] = None, overdue: Optional[bool] = None, search: Optional[str] = None) -> tuple[list[Job], int]:
     query = select(Job).join(Property).join(Client).where(Client.owner_id == owner_id)
     count_query = select(func.count()).select_from(Job).join(Property).join(Client).where(Client.owner_id == owner_id)
 
-    if status:
+    if search:
+        search_filter = f"%{search}%"
+        search_cond = Job.title.ilike(search_filter) | Job.description.ilike(search_filter)
+        query = query.where(search_cond)
+        count_query = count_query.where(search_cond)
+    if overdue:
+        overdue_filter = (Job.scheduled_date < date.today()) & (Job.status.notin_([JobStatus.COMPLETED, JobStatus.CANCELLED]))
+        query = query.where(overdue_filter)
+        count_query = count_query.where(overdue_filter)
+    elif status:
         query = query.where(Job.status == status)
         count_query = count_query.where(Job.status == status)
     if job_type:
@@ -42,7 +51,8 @@ async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 2
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    query = query.order_by(Job.scheduled_date.desc()).offset((page - 1) * size).limit(size)
+    order = Job.scheduled_date.asc() if overdue else Job.scheduled_date.desc()
+    query = query.order_by(order).offset((page - 1) * size).limit(size)
     result = await db.execute(query)
     jobs = list(result.scalars().all())
     return jobs, total

@@ -19,10 +19,11 @@ async def list_clients(
     size: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
     active_only: bool = True,
+    is_active: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    clients, total = await client_service.get_clients(db, current_user.id, page, size, search, active_only)
+    clients, total = await client_service.get_clients(db, current_user.id, page, size, search, active_only, is_active)
     return PaginatedResponse(items=clients, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
 
 @router.get("/{client_id}", response_model=ClientResponse)

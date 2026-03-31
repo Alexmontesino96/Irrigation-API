@@ -22,10 +22,11 @@ async def list_reminders(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
+    search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    reminders, total = await reminder_service.get_reminders(db, current_user.id, page, size, status)
+    reminders, total = await reminder_service.get_reminders(db, current_user.id, page, size, status, search)
     return PaginatedResponse(items=reminders, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
 
 @router.get("/{reminder_id}", response_model=ReminderResponse)

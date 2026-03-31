@@ -10,3 +10,5 @@ __pycache__/
 dist/
 build/
 alembic/versions/*.pyc
+frontend/
+backups/

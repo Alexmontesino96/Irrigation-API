@@ -20,10 +20,12 @@ async def list_jobs(
     status: Optional[str] = None,
     job_type: Optional[str] = None,
     property_id: Optional[str] = None,
+    overdue: Optional[bool] = None,
+    search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    jobs, total = await job_service.get_jobs(db, current_user.id, page, size, status, job_type, property_id)
+    jobs, total = await job_service.get_jobs(db, current_user.id, page, size, status, job_type, property_id, overdue, search)
     return PaginatedResponse(items=jobs, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
 
 @router.get("/{job_id}", response_model=JobResponse)

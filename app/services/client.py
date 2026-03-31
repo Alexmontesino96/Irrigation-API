@@ -11,11 +11,15 @@ async def create_client(db: AsyncSession, owner_id: str, data: dict) -> Client:
     await db.refresh(client)
     return client
 
-async def get_clients(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, search: Optional[str] = None, active_only: bool = True) -> tuple[list[Client], int]:
+async def get_clients(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, search: Optional[str] = None, active_only: bool = True, is_active: Optional[bool] = None) -> tuple[list[Client], int]:
     query = select(Client).where(Client.owner_id == owner_id)
     count_query = select(func.count()).select_from(Client).where(Client.owner_id == owner_id)
 
-    if active_only:
+    # is_active takes priority over active_only for explicit filtering
+    if is_active is not None:
+        query = query.where(Client.is_active == is_active)
+        count_query = count_query.where(Client.is_active == is_active)
+    elif active_only:
         query = query.where(Client.is_active == True)
         count_query = count_query.where(Client.is_active == True)
 
