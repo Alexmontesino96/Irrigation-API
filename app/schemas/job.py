@@ -35,7 +35,18 @@ class JobResponse(BaseModel):
     price: Optional[float] = None
     reminder_days: Optional[List[int]] = None
     notes: Optional[str] = None
+    client_name: Optional[str] = None
+    property_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_job(cls, job) -> "JobResponse":
+        data = cls.model_validate(job)
+        if hasattr(job, "property") and job.property:
+            data.property_name = job.property.name
+            if hasattr(job.property, "client") and job.property.client:
+                data.client_name = f"{job.property.client.first_name} {job.property.client.last_name}"
+        return data

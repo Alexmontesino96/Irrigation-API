@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from typing import Optional
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.job import Job, JobStatus, JobType
 from app.models.reminder import Reminder, ReminderStatus
@@ -26,7 +27,7 @@ async def create_job(db: AsyncSession, owner_id: str, data: dict) -> Job:
     return job
 
 async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, job_type: Optional[str] = None, property_id: Optional[str] = None, overdue: Optional[bool] = None, search: Optional[str] = None) -> tuple[list[Job], int]:
-    query = select(Job).join(Property).join(Client).where(Client.owner_id == owner_id)
+    query = select(Job).join(Property).join(Client).where(Client.owner_id == owner_id).options(joinedload(Job.property).joinedload(Property.client))
     count_query = select(func.count()).select_from(Job).join(Property).join(Client).where(Client.owner_id == owner_id)
 
     if search:
@@ -59,7 +60,7 @@ async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 2
 
 async def get_job(db: AsyncSession, owner_id: str, job_id: str) -> Job:
     result = await db.execute(
-        select(Job).join(Property).join(Client).where(Job.id == job_id, Client.owner_id == owner_id)
+        select(Job).join(Property).join(Client).where(Job.id == job_id, Client.owner_id == owner_id).options(joinedload(Job.property).joinedload(Property.client))
     )
     job = result.scalar_one_or_none()
     if not job:

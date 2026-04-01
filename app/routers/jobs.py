@@ -26,11 +26,13 @@ async def list_jobs(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     jobs, total = await job_service.get_jobs(db, current_user.id, page, size, status, job_type, property_id, overdue, search)
-    return PaginatedResponse(items=jobs, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
+    items = [JobResponse.from_job(j) for j in jobs]
+    return PaginatedResponse(items=items, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(job_id: str, db: AsyncSession = Depends(get_db), current_user: CurrentUser = Depends(get_current_user)):
-    return await job_service.get_job(db, current_user.id, job_id)
+    job = await job_service.get_job(db, current_user.id, job_id)
+    return JobResponse.from_job(job)
 
 @router.patch("/{job_id}", response_model=JobResponse)
 async def update_job(job_id: str, data: JobUpdate, db: AsyncSession = Depends(get_db), current_user: CurrentUser = Depends(get_current_user)):
