@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, asc, desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.job import Job, JobStatus, JobType
@@ -8,6 +8,8 @@ from app.models.reminder import Reminder, ReminderStatus
 from app.models.property import Property
 from app.models.client import Client
 from app.exceptions import NotFoundException
+
+_JOB_SORT_WHITELIST = {"title", "scheduled_date", "status", "job_type", "price", "created_at"}
 
 async def _verify_property_ownership(db: AsyncSession, property_id: str, owner_id: str) -> Property:
     result = await db.execute(
@@ -26,7 +28,7 @@ async def create_job(db: AsyncSession, owner_id: str, data: dict) -> Job:
     await db.refresh(job)
     return job
 
-async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, job_type: Optional[str] = None, property_id: Optional[str] = None, overdue: Optional[bool] = None, search: Optional[str] = None) -> tuple[list[Job], int]:
+async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, job_type: Optional[str] = None, property_id: Optional[str] = None, overdue: Optional[bool] = None, search: Optional[str] = None, sort_by: str = "scheduled_date", sort_order: str = "desc") -> tuple[list[Job], int]:
     query = select(Job).join(Property).join(Client).where(Client.owner_id == owner_id).options(joinedload(Job.property).joinedload(Property.client))
     count_query = select(func.count()).select_from(Job).join(Property).join(Client).where(Client.owner_id == owner_id)
 
@@ -52,7 +54,12 @@ async def get_jobs(db: AsyncSession, owner_id: str, page: int = 1, size: int = 2
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    order = Job.scheduled_date.asc() if overdue else Job.scheduled_date.desc()
+    if overdue and sort_by == "scheduled_date" and sort_order == "desc":
+        order = Job.scheduled_date.asc()
+    else:
+        col = getattr(Job, sort_by) if sort_by in _JOB_SORT_WHITELIST else Job.scheduled_date
+        order_fn = asc if sort_order == "asc" else desc
+        order = order_fn(col)
     query = query.order_by(order).offset((page - 1) * size).limit(size)
     result = await db.execute(query)
     jobs = list(result.scalars().all())

@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.reminder import Reminder, ReminderStatus
 from app.models.property import Property
 from app.models.client import Client
 from app.exceptions import NotFoundException
+
+_REMINDER_SORT_WHITELIST = {"title", "remind_date", "status", "created_at"}
 
 async def create_reminder(db: AsyncSession, owner_id: str, data: dict) -> Reminder:
     # Verify property ownership
@@ -21,7 +23,7 @@ async def create_reminder(db: AsyncSession, owner_id: str, data: dict) -> Remind
     await db.refresh(reminder)
     return reminder
 
-async def get_reminders(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, search: Optional[str] = None) -> tuple[list[Reminder], int]:
+async def get_reminders(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, status: Optional[str] = None, search: Optional[str] = None, sort_by: str = "remind_date", sort_order: str = "asc") -> tuple[list[Reminder], int]:
     query = select(Reminder).join(Property).join(Client).where(Client.owner_id == owner_id)
     count_query = select(func.count()).select_from(Reminder).join(Property).join(Client).where(Client.owner_id == owner_id)
 
@@ -37,7 +39,9 @@ async def get_reminders(db: AsyncSession, owner_id: str, page: int = 1, size: in
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    query = query.order_by(Reminder.remind_date.asc()).offset((page - 1) * size).limit(size)
+    col = getattr(Reminder, sort_by) if sort_by in _REMINDER_SORT_WHITELIST else Reminder.remind_date
+    order_fn = asc if sort_order == "asc" else desc
+    query = query.order_by(order_fn(col)).offset((page - 1) * size).limit(size)
     result = await db.execute(query)
     reminders = list(result.scalars().all())
     return reminders, total

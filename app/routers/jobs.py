@@ -22,10 +22,12 @@ async def list_jobs(
     property_id: Optional[str] = None,
     overdue: Optional[bool] = None,
     search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    jobs, total = await job_service.get_jobs(db, current_user.id, page, size, status, job_type, property_id, overdue, search)
+    jobs, total = await job_service.get_jobs(db, current_user.id, page, size, status, job_type, property_id, overdue, search, sort_by=sort_by or "scheduled_date", sort_order=sort_order or "desc")
     items = [JobResponse.from_job(j) for j in jobs]
     return PaginatedResponse(items=items, total=total, page=page, size=size, pages=(total + size - 1) // size if total > 0 else 0)
 

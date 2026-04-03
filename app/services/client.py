@@ -1,8 +1,10 @@
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.client import Client
 from app.exceptions import NotFoundException
+
+_CLIENT_SORT_WHITELIST = {"first_name", "last_name", "email", "created_at"}
 
 async def create_client(db: AsyncSession, owner_id: str, data: dict) -> Client:
     client = Client(owner_id=owner_id, **data)
@@ -11,7 +13,7 @@ async def create_client(db: AsyncSession, owner_id: str, data: dict) -> Client:
     await db.refresh(client)
     return client
 
-async def get_clients(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, search: Optional[str] = None, active_only: bool = True, is_active: Optional[bool] = None) -> tuple[list[Client], int]:
+async def get_clients(db: AsyncSession, owner_id: str, page: int = 1, size: int = 20, search: Optional[str] = None, active_only: bool = True, is_active: Optional[bool] = None, sort_by: str = "created_at", sort_order: str = "desc") -> tuple[list[Client], int]:
     query = select(Client).where(Client.owner_id == owner_id)
     count_query = select(func.count()).select_from(Client).where(Client.owner_id == owner_id)
 
@@ -41,7 +43,9 @@ async def get_clients(db: AsyncSession, owner_id: str, page: int = 1, size: int 
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    query = query.order_by(Client.created_at.desc()).offset((page - 1) * size).limit(size)
+    col = getattr(Client, sort_by) if sort_by in _CLIENT_SORT_WHITELIST else Client.created_at
+    order_fn = asc if sort_order == "asc" else desc
+    query = query.order_by(order_fn(col)).offset((page - 1) * size).limit(size)
     result = await db.execute(query)
     clients = list(result.scalars().all())
 
