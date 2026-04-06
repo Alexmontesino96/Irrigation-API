@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.exceptions import register_exception_handlers
 
-from app.routers import auth, clients, properties, irrigation_systems, jobs, job_notes, reminders, calendar
+from app.routers import auth, clients, properties, irrigation_systems, jobs, job_notes, job_materials, reminders, calendar, expenses, invoices, sms, subscriptions, analytics
 
 app = FastAPI(
     title="Irrigation System API",
@@ -30,6 +30,12 @@ app.include_router(jobs.router)
 app.include_router(job_notes.router)
 app.include_router(reminders.router)
 app.include_router(calendar.router)
+app.include_router(job_materials.router)
+app.include_router(expenses.router)
+app.include_router(invoices.router)
+app.include_router(sms.router)
+app.include_router(subscriptions.router)
+app.include_router(analytics.router)
 
 @app.on_event("startup")
 async def startup():

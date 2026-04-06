@@ -54,3 +54,4 @@ class Job(Base):
     property = relationship("Property", back_populates="jobs")
     job_notes = relationship("JobNote", back_populates="job")
     reminders = relationship("Reminder", back_populates="job")
+    materials = relationship("JobMaterial", back_populates="job", cascade="all, delete-orphan")
