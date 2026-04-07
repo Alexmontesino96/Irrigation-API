@@ -70,8 +70,9 @@ async def get_all_properties(
 ) -> tuple[list[Property], int]:
     """Return all properties across all clients owned by owner_id."""
     from sqlalchemy import asc, desc as _desc
+    from sqlalchemy.orm import selectinload
 
-    base = select(Property).join(Client).where(Client.owner_id == owner_id)
+    base = select(Property).join(Client).where(Client.owner_id == owner_id).options(selectinload(Property.client))
     count_base = select(func.count()).select_from(Property).join(Client).where(Client.owner_id == owner_id)
 
     if search:
