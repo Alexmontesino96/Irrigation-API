@@ -54,3 +54,46 @@ async def delete_property(db: AsyncSession, owner_id: str, property_id: str) -> 
     prop = await get_property(db, owner_id, property_id)
     await db.delete(prop)
     await db.commit()
+
+
+_PROPERTY_SORT_WHITELIST = {"name", "address", "city", "created_at", "updated_at"}
+
+
+async def get_all_properties(
+    db: AsyncSession,
+    owner_id: str,
+    page: int = 1,
+    size: int = 20,
+    search: str | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+) -> tuple[list[Property], int]:
+    """Return all properties across all clients owned by owner_id."""
+    from sqlalchemy import asc, desc as _desc
+
+    base = select(Property).join(Client).where(Client.owner_id == owner_id)
+    count_base = select(func.count()).select_from(Property).join(Client).where(Client.owner_id == owner_id)
+
+    if search:
+        search_filter = f"%{search}%"
+        search_cond = (
+            Property.name.ilike(search_filter)
+            | Property.address.ilike(search_filter)
+        )
+        base = base.where(search_cond)
+        count_base = count_base.where(search_cond)
+
+    total_result = await db.execute(count_base)
+    total = total_result.scalar()
+
+    col = (
+        getattr(Property, sort_by)
+        if sort_by in _PROPERTY_SORT_WHITELIST
+        else Property.created_at
+    )
+    order_fn = asc if sort_order == "asc" else _desc
+    query = base.order_by(order_fn(col)).offset((page - 1) * size).limit(size)
+
+    result = await db.execute(query)
+    properties = list(result.scalars().all())
+    return properties, total
