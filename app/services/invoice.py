@@ -73,7 +73,7 @@ async def create_invoice_from_job(db: AsyncSession, owner_id: str, job_id: str) 
             joinedload(Job.materials),
         )
     )
-    job = result.scalar_one_or_none()
+    job = result.unique().scalar_one_or_none()
     if not job:
         raise NotFoundException("Job not found")
 
